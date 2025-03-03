@@ -9,6 +9,7 @@ streamlit
 streamlit-option-menu
 py2neo
 pyvis
+torch
 
 
 neo4j-driver
