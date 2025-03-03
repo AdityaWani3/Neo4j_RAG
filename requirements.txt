@@ -20,6 +20,7 @@ langchain-google-vertexai
 sentence-transformers
 langchain-community
 langchain-huggingface
+langchain-neo4j
 
 SpeechRecognition
 gTTS
