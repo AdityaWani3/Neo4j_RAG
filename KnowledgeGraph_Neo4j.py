@@ -18,6 +18,8 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 from typing import List
 from langchain_community.vectorstores.neo4j_vector import remove_lucene_chars
 from langchain_core.output_parsers import StrOutputParser
+from langchain_neo4j import Neo4jGraph
+
 
 class RAG_Graph:
     
