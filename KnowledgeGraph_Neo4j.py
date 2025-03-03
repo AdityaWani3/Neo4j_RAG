@@ -12,7 +12,7 @@ from langchain_community.document_loaders import DirectoryLoader
 from langchain.text_splitter import TokenTextSplitter
 from langchain_experimental.graph_transformers import LLMGraphTransformer
 from langchain_community.vectorstores import Neo4jVector
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.pydantic_v1 import BaseModel, Field
 from typing import List
