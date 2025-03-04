@@ -5,7 +5,7 @@ from pathlib import Path
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.embeddings import HuggingFaceEmbeddings
 from streamlit_option_menu import option_menu
 from dotenv import load_dotenv, find_dotenv
 from langsmith import Client
@@ -33,6 +33,7 @@ def apply_light_theme_css():
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            color:white;
             
         }
 
@@ -197,7 +198,7 @@ def main():
             "nav-link": {
                 "font-size": "16px",  # Font size for the menu text
                 "text-align": "center",  # Aligns text in the center
-                "color": "black",  # Text color
+                "color": "orange",  # Text color
                 "padding": "10px",  # Adds padding to each menu item
             },
             "nav-link-selected": {
