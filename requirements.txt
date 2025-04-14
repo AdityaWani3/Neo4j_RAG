@@ -11,7 +11,7 @@ py2neo
 pyvis
 torch
 
-
+neo4j
 neo4j-driver
 gradio
 langchain
