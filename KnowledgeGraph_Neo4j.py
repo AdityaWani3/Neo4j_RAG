@@ -1,5 +1,6 @@
 import os
 import tempfile
+from pathlib import Path
 from langchain_core.runnables import (
     RunnableParallel,
     RunnablePassthrough
@@ -14,7 +15,7 @@ from langchain_experimental.graph_transformers import LLMGraphTransformer
 from langchain_community.vectorstores import Neo4jVector
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel
+from pydantic import BaseModel, Field  # ✅ Fixed import
 from typing import List
 from langchain_community.vectorstores.neo4j_vector import remove_lucene_chars
 from langchain_core.output_parsers import StrOutputParser
@@ -22,7 +23,6 @@ from langchain_neo4j import Neo4jGraph
 
 
 class RAG_Graph:
-    
     load_dotenv(find_dotenv())
 
     default_cypher = "MATCH (s)-[r:!MENTIONS]->(t) RETURN s,r,t LIMIT 100"
@@ -30,16 +30,21 @@ class RAG_Graph:
     def __init__(self):
         os.environ["NEO4J_URI"] = "neo4j+s://d9669220.databases.neo4j.io"
         os.environ["NEO4J_USERNAME"] = "neo4j"
-        os.environ["NEO4J_PASSWORD"]= "uGRFZkX7QBl2ehkTixL71J65j_K8WVTn8GzZjubpnG0"
+        os.environ["NEO4J_PASSWORD"] = "uGRFZkX7QBl2ehkTixL71J65j_K8WVTn8GzZjubpnG0"
+
         self.graph = Neo4jGraph()
-        self.llm = ChatGroq(temperature=0.5, groq_api_key=os.getenv("GROQ_API_KEY"), model_name="llama3-70b-8192")
-    
-    def create_graph(self, docs, TMP_DIR):
-        for source_docs in docs:
+        self.llm = ChatGroq(
+            temperature=0.5,
+            groq_api_key=os.getenv("GROQ_API_KEY"),
+            model_name="llama3-70b-8192"
+        )
+
+    def create_graph(self, docs, TMP_DIR: Path):
+        for source_doc in docs:
             with tempfile.NamedTemporaryFile(delete=False, dir=TMP_DIR.as_posix(), suffix='.docx') as temp_file:
-                temp_file.write(source_docs.read())
-        
-        loader = DirectoryLoader(TMP_DIR.as_posix(), glob='**/*docx', show_progress=True)
+                temp_file.write(source_doc.read())
+
+        loader = DirectoryLoader(TMP_DIR.as_posix(), glob='**/*.docx', show_progress=True)
         self.document = loader.load()
 
         text_splitter = TokenTextSplitter(chunk_size=1000, chunk_overlap=0)
@@ -47,11 +52,8 @@ class RAG_Graph:
         print(f"Text Split into {len(texts)} chunks")
 
         llm_transformer = LLMGraphTransformer(llm=self.llm)
-        # Extract graph data
         graph_documents = llm_transformer.convert_to_graph_documents(texts)
-        vector_index_config = {"vector": {"type": "embedding", "dimension": 768}}
 
-        # Store to Neo4J
         self.graph.add_graph_documents(
             graph_documents,
             baseEntityLabel=True,
@@ -60,26 +62,24 @@ class RAG_Graph:
 
     def create_vector_index(self):
         model_name = 'sentence-transformers/all-mpnet-base-v2'
-        # model_name='sentence-transformers/all-MiniLM-L6-v2'
         self.vector_index = Neo4jVector.from_existing_index(
             HuggingFaceEmbeddings(model_name=model_name, model_kwargs={'device': 'cpu'}),
             url=os.environ["NEO4J_URI"],
             username=os.environ["NEO4J_USERNAME"],
             password=os.environ["NEO4J_PASSWORD"],
             index_name="vector",
-        )   
-    
+        )
+
     def prepare_chat_template(self):
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-                    "You are extracting fields and business rules from the text"
+                    "You are extracting fields and business rules from the text."
                 ),
                 (
                     "human",
-                    "Use this given format to extract the information from the following"
-                    "input: {question}",
+                    "Use this given format to extract the information from the following input: {question}"
                 ),
             ]
         )
@@ -89,41 +89,43 @@ class RAG_Graph:
         print(f"Search query: {question}")
         structure_data = self.structured_retriever(question)
         unstructured_data = [el.page_content for el in self.vector_index.similarity_search(question)]
+
         final_data = f"""Structured data:
-        {structure_data}
-        Unstructured data:
-        {"#Document ".join(unstructured_data)}
-        """
+{structure_data}
+
+Unstructured data:
+{"#Document ".join(unstructured_data)}
+"""
         return final_data
 
     def structured_retriever(self, question: str) -> str:
         result = ""
         entities = self.entity_chain.invoke({"question": question})
-        
-        # This will return a self query for all nodes and neighbors
+
         for entity in entities.names:
             response = self.graph.query(
-                """CALL db.index.fulltext.queryNodes('entity', $query, {limit:2})
+                """
+                CALL db.index.fulltext.queryNodes('entity', $query, {limit:2})
                 YIELD node,score
                 CALL {
-                  WITH node
-                  MATCH (node)-[r:!MENTIONS]->(neighbor)
-                  RETURN node.id + ' - ' + type(r) + ' -> ' + neighbor.id AS output
-                  UNION ALL
-                  WITH node
-                  MATCH (node)<-[r:!MENTIONS]-(neighbor)
-                  RETURN neighbor.id + ' - ' + type(r) + ' -> ' +  node.id AS output
+                    WITH node
+                    MATCH (node)-[r:!MENTIONS]->(neighbor)
+                    RETURN node.id + ' - ' + type(r) + ' -> ' + neighbor.id AS output
+                    UNION ALL
+                    WITH node
+                    MATCH (node)<-[r:!MENTIONS]-(neighbor)
+                    RETURN neighbor.id + ' - ' + type(r) + ' -> ' + node.id AS output
                 }
                 RETURN output LIMIT 50
                 """,
                 {"query": self.generate_full_text_query(entity)},
             )
-            
-            # Check if response is empty and handle accordingly
+
             if not response:
                 result += f"No results found for entity: {entity}\n"
             else:
-                result += "\n".join([el['output'] for el in response])
+                result += "\n".join([el['output'] for el in response]) + "\n"
+
         return result
 
     @staticmethod
@@ -135,17 +137,19 @@ class RAG_Graph:
         full_text_query += f" {words[-1]}~2"
         return full_text_query.strip()
 
-    def ask_question_chain(self, query):
-        self.graph.query("CREATE FULLTEXT INDEX entity IF NOT EXISTS FOR (e:__Entity__) ON EACH [e.id]")
+    def ask_question_chain(self, query: str):
+        self.graph.query(
+            "CREATE FULLTEXT INDEX entity IF NOT EXISTS FOR (e:__Entity__) ON EACH [e.id]"
+        )
         self.create_vector_index()
         self.prepare_chat_template()
 
-        template = """Answer the question based only on the following context
-        {context}
-        
-        Question: {question}
-        User natural language and be concise.
-        Answer: """
+        template = """Answer the question based only on the following context:
+{context}
+
+Question: {question}
+Use natural language and be concise.
+Answer:"""
 
         prompt = ChatPromptTemplate.from_template(template)
 
@@ -160,13 +164,14 @@ class RAG_Graph:
             | self.llm
             | StrOutputParser()
         )
+
         result = chain.invoke(query)
         return result
 
 
 class Entities(BaseModel):
-    """Identify information about entities"""
+    """Identify information about entities."""
     names: List[str] = Field(
         ...,
-        description="All the fields, or business rules that appear in the text"
+        description="All the fields or business rules that appear in the text."
     )
