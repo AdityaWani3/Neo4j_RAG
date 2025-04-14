@@ -28,9 +28,9 @@ class RAG_Graph:
     default_cypher = "MATCH (s)-[r:!MENTIONS]->(t) RETURN s,r,t LIMIT 100"
 
     def __init__(self):
-        os.environ["NEO4J_URI"] = "neo4j+s://d9669220.databases.neo4j.io"
+        os.environ["NEO4J_URI"] = "neo4j+s://5be46d4d.databases.neo4j.io"
         os.environ["NEO4J_USERNAME"] = "neo4j"
-        os.environ["NEO4J_PASSWORD"] = "uGRFZkX7QBl2ehkTixL71J65j_K8WVTn8GzZjubpnG0"
+        os.environ["NEO4J_PASSWORD"] = "69ScFXiLacdfmO7ycRkMcjy86q3QesDOHhmC2Isdcdo"
 
         self.graph = Neo4jGraph()
         self.llm = ChatGroq(
