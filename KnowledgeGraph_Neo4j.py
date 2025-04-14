@@ -12,9 +12,9 @@ from langchain_community.document_loaders import DirectoryLoader
 from langchain.text_splitter import TokenTextSplitter
 from langchain_experimental.graph_transformers import LLMGraphTransformer
 from langchain_community.vectorstores import Neo4jVector
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel
 from typing import List
 from langchain_community.vectorstores.neo4j_vector import remove_lucene_chars
 from langchain_core.output_parsers import StrOutputParser
