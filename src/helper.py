@@ -39,7 +39,7 @@ def llm_model_object(user_text):
     
     genai.configure(api_key=GOOGLE_API_KEY)
     
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-2.0-pro-exp')
     
     response=model.generate_content(user_text)
     
